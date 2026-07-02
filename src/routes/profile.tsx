@@ -30,11 +30,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 async function submitVerificationRequest() {
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return;
-  await supabase.from("verification_requests").insert({
+  if (!auth.user) throw new Error("Harus login dulu");
+  const { error } = await supabase.from("verification_requests").insert({
     user_id: auth.user.id,
     status: "pending",
   });
+  if (error) throw error;
   await supabase
     .from("profiles")
     .update({ verification_pending: true })
@@ -43,13 +44,14 @@ async function submitVerificationRequest() {
 
 async function submitSubscriptionRequest(proof: string, amount: number) {
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return;
-  await supabase.from("subscription_requests").insert({
+  if (!auth.user) throw new Error("Harus login dulu");
+  const { error } = await supabase.from("subscription_requests").insert({
     user_id: auth.user.id,
     proof_url: proof || null,
     amount,
     status: "pending",
   });
+  if (error) throw error;
 }
 
 export const Route = createFileRoute("/profile")({
@@ -415,10 +417,14 @@ function ProfilePage() {
                 verified={user.verified}
                 pending={user.verificationPending}
                 onSubmit={async () => {
-                  setUser({ verificationPending: true });
-                  await submitVerificationRequest();
-                  toast.success("Pengajuan centang biru dikirim ke admin");
-                  setSheet(null);
+                  try {
+                    await submitVerificationRequest();
+                    setUser({ verificationPending: true });
+                    toast.success("Pengajuan centang biru dikirim ke admin");
+                    setSheet(null);
+                  } catch (e: any) {
+                    toast.error(e?.message || "Gagal mengirim pengajuan");
+                  }
                 }}
               />
             )}
@@ -449,13 +455,17 @@ function ProfilePage() {
                 until={user.subscriptionUntil}
                 priceLabel={priceLabel}
                 onSubmit={async (proof) => {
-                  setUser({
-                    subscriptionPending: true,
-                    subscriptionProof: proof,
-                  });
-                  await submitSubscriptionRequest(proof, subscriptionPrice);
-                  toast.success("Bukti transfer terkirim. Menunggu ACC admin.");
-                  setSheet(null);
+                  try {
+                    await submitSubscriptionRequest(proof, subscriptionPrice);
+                    setUser({
+                      subscriptionPending: true,
+                      subscriptionProof: proof,
+                    });
+                    toast.success("Bukti transfer terkirim. Menunggu ACC admin.");
+                    setSheet(null);
+                  } catch (e: any) {
+                    toast.error(e?.message || "Gagal mengirim pengajuan");
+                  }
                 }}
               />
             )}
