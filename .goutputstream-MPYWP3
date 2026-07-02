@@ -1,0 +1,91 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
+from faker import Faker
+import time, random
+
+fake = Faker('id_ID')
+DELAY = 1.5 # Jeda biar ga ke-detect bot
+PASSWORD_KUSTOM = "Cuan77@@" # Ganti kalo mau
+
+def slow_click(driver, xpath):
+    btn = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, xpath)))
+    driver.execute_script("arguments[0].scrollIntoView();", btn)
+    time.sleep(0.5)
+    btn.click()
+    time.sleep(DELAY)
+
+def slow_send(driver, by, value, text):
+    field = WebDriverWait(driver, 15).until(EC.presence_of_element_located((by, value)))
+    field.clear()
+    for char in text:
+        field.send_keys(char)
+        time.sleep(0.05)
+    time.sleep(DELAY)
+
+def create_kid_gmail():
+    options = webdriver.FirefoxOptions()
+    options.add_argument("--private")
+    options.set_preference("dom.webdriver.enabled", False)
+    options.set_preference('useAutomationExtension', False)
+
+    print("[+] Buka browser...")
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
+    wait = WebDriverWait(driver, 30)
+
+    try:
+        driver.get("https://familylink.google.com/")
+        time.sleep(3)
+
+        print("[+] Mulai isi data...")
+        slow_click(driver, "//span[contains(text(),'Tidak')]")
+        slow_click(driver, "//span[contains(text(),'Berikutnya')]")
+
+        first = fake.first_name()
+        last = fake.last_name()
+        username = f"{first.lower()}{last.lower()[:3]}{random.randint(100,999)}"
+        password = PASSWORD_KUSTOM
+        birth_year = random.randint(2008, 2016)
+        birth_month = random.randint(1,12)
+        birth_day = random.randint(1,28)
+
+        slow_send(driver, By.NAME, "firstName", first)
+        slow_send(driver, By.NAME, "lastName", last)
+        slow_click(driver, "//span[contains(text(),'Berikutnya')]")
+
+        slow_send(driver, By.NAME, "day", str(birth_day))
+        wait.until(EC.element_to_be_clickable((By.ID, "month"))).click()
+        slow_click(driver, f"//option[@value='{birth_month}']")
+        slow_send(driver, By.NAME, "year", str(birth_year))
+        wait.until(EC.element_to_be_clickable((By.ID, "gender"))).click()
+        slow_click(driver, "//option[@value='1']")
+        slow_click(driver, "//span[contains(text(),'Berikutnya')]")
+
+        slow_send(driver, By.NAME, "Username", username)
+        slow_click(driver, "//span[contains(text(),'Berikutnya')]")
+        slow_send(driver, By.NAME, "Passwd", password)
+        slow_send(driver, By.NAME, "PasswdAgain", password)
+        slow_click(driver, "//span[contains(text(),'Berikutnya')]")
+
+        email = f"{username}@gmail.com"
+        data = f"Email: {email} | Pass: {password} | Nama: {first} {last} | Lahir: {birth_day}-{birth_month}-{birth_year}\n"
+        with open("HASIL_AKUN.txt", "a") as f:
+            f.write(data)
+
+        print(f"\n[+] BERHASIL SAMPE OTP BRO")
+        print(f"[*] Email: {email}")
+        print(f"[*] Password: {password}")
+        print(f"[*] Data kesave di HASIL_AKUN.txt")
+        print("[!] Tinggal isi nomor HP manual buat OTP di browser")
+        input("Pencet ENTER kalo udah kelar OTP biar browser ketutup...")
+
+    except Exception as e:
+        print(f"[-] Error: {e}")
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    create_kid_gmail()
