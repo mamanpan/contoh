@@ -1,0 +1,1 @@
+ALTER TABLE public.branding ADD COLUMN IF NOT EXISTS subscription_price integer NOT NULL DEFAULT 10000;
